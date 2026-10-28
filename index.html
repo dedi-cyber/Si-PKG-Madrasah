@@ -1,0 +1,1375 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistem Penilaian Kinerja Guru (PKG) Madrasah & e-Kinerja BKN</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        kemenag: {
+                            50: '#f0fdf4',
+                            100: '#dcfce7',
+                            500: '#22c55e',
+                            600: '#16a34a',
+                            700: '#15803d',
+                            800: '#166534',
+                            900: '#14532d',
+                        },
+                        gold: {
+                            400: '#fbbf24',
+                            500: '#f59e0b',
+                            600: '#d97706',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    
+    <!-- Font Awesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Teko:wght@600&display=swap" rel="stylesheet">
+    
+    <!-- Alpine.js -->
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f8fafc;
+            color: #1e293b;
+        }
+
+        /* Custom Print Styling to produce clean PDF / Printouts */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            body {
+                background: white !important;
+                color: black !important;
+                font-size: 11pt;
+            }
+            .print-only {
+                display: block !important;
+            }
+            .page-break {
+                page-break-before: always;
+            }
+            .card-box {
+                border: 1px solid #000 !important;
+                box-shadow: none !important;
+            }
+            @page {
+                size: A4 portrait;
+                margin: 1.5cm;
+            }
+        }
+
+        .print-only {
+            display: none;
+        }
+
+        /* Custom scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f5f9;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body x-data="pkgApp()" x-init="initApp()" class="min-h-screen flex flex-col justify-between">
+
+    <!-- TOP HEADER / NAVBAR (No Print) -->
+    <header class="no-print bg-gradient-to-r from-kemenag-900 via-kemenag-800 to-kemenag-700 text-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gold-500 rounded-lg flex items-center justify-center text-kemenag-900 font-extrabold shadow-md">
+                        <i class="fa-solid fa-graduation-cap text-xl"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-bold text-lg sm:text-xl tracking-tight leading-none">Si-PKG MADRASAH ONLINE</h1>
+                        <p class="text-xs text-emerald-200 mt-1">Sesuai Kepdirjen Pendis No. 1843/2021 & Integrasi e-Kinerja BKN</p>
+                    </div>
+                </div>
+                
+                <div class="flex items-center space-x-2 text-xs sm:text-sm">
+                    <button @click="saveToLocalStorage()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3 py-1.5 rounded-lg flex items-center space-x-1.5 shadow transition">
+                        <i class="fa-solid fa-floppy-disk"></i>
+                        <span class="hidden sm:inline">Simpan Draft</span>
+                    </button>
+                    <button @click="loadPresetDemo()" class="bg-gold-500 hover:bg-gold-400 text-kemenag-900 font-semibold px-3 py-1.5 rounded-lg flex items-center space-x-1.5 shadow transition">
+                        <i class="fa-solid fa-wand-magic-sparkles"></i>
+                        <span class="hidden sm:inline">Isi Demo Data</span>
+                    </button>
+                    <button @click="triggerPrint()" class="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded-lg flex items-center space-x-1.5 shadow transition">
+                        <i class="fa-solid fa-print"></i>
+                        <span>Cetak / PDF</span>
+                    </button>
+                </div>
+            </div>
+            
+            <!-- TAB NAVIGATION -->
+            <nav class="flex space-x-1 sm:space-x-4 mt-4 border-t border-emerald-700 pt-2 overflow-x-auto">
+                <button @click="activeTab = 'identitas'" :class="activeTab === 'identitas' ? 'bg-white text-kemenag-900 font-bold shadow' : 'text-emerald-100 hover:bg-emerald-800/60'" class="px-3 py-1.5 rounded-md text-xs sm:text-sm whitespace-nowrap transition flex items-center space-x-2">
+                    <i class="fa-solid fa-id-card"></i>
+                    <span>1. Data Utama</span>
+                </button>
+                <button @click="activeTab = 'penilaian'" :class="activeTab === 'penilaian' ? 'bg-white text-kemenag-900 font-bold shadow' : 'text-emerald-100 hover:bg-emerald-800/60'" class="px-3 py-1.5 rounded-md text-xs sm:text-sm whitespace-nowrap transition flex items-center space-x-2">
+                    <i class="fa-solid fa-clipboard-check"></i>
+                    <span>2. Instrumen PKG</span>
+                </button>
+                <button @click="activeTab = 'bkn'" :class="activeTab === 'bkn' ? 'bg-white text-kemenag-900 font-bold shadow' : 'text-emerald-100 hover:bg-emerald-800/60'" class="px-3 py-1.5 rounded-md text-xs sm:text-sm whitespace-nowrap transition flex items-center space-x-2">
+                    <i class="fa-solid fa-chart-pie"></i>
+                    <span>3. Rekap & e-Kinerja BKN</span>
+                </button>
+                <button @click="activeTab = 'kelola'" :class="activeTab === 'kelola' ? 'bg-white text-kemenag-900 font-bold shadow' : 'text-emerald-100 hover:bg-emerald-800/60'" class="px-3 py-1.5 rounded-md text-xs sm:text-sm whitespace-nowrap transition flex items-center space-x-2">
+                    <i class="fa-solid fa-database"></i>
+                    <span>4. Riwayat & Berkas</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- MAIN CONTENT CONTAINER (Interactive Web Mode) -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 flex-grow no-print">
+
+        <!-- NOTIFICATION TOAST -->
+        <div x-show="toast.show" x-transition class="fixed bottom-5 right-5 z-50 bg-slate-800 text-white px-4 py-3 rounded-lg shadow-xl flex items-center space-x-3 border-l-4" :class="toast.type === 'success' ? 'border-emerald-500' : 'border-amber-500'">
+            <i class="fa-solid" :class="toast.type === 'success' ? 'fa-circle-check text-emerald-400' : 'fa-circle-info text-amber-400'"></i>
+            <span class="text-sm font-medium" x-text="toast.message"></span>
+        </div>
+
+        <!-- ==================== TAB 1: DATA UTAMA ==================== -->
+        <div x-show="activeTab === 'identitas'" x-transition class="space-y-6">
+            
+            <!-- BANNER INFORMASI -->
+            <div class="bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 sm:p-5 flex items-start space-x-4">
+                <div class="bg-emerald-500 text-white p-3 rounded-lg flex-shrink-0">
+                    <i class="fa-solid fa-circle-info text-xl"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-emerald-900 text-base">Pengaturan Profil & Parameter Penilaian Kinerja</h3>
+                    <p class="text-xs sm:text-sm text-emerald-700 mt-1">
+                        Pilihlah Tingkat Madrasah (RA, MI, MTs, MA), jenis tugas guru, dan lengkapi data kepegawaian untuk penyesuaian perhitungan Angka Kredit (AK) dan integrasi sistem pelaporan e-Kinerja BKN.
+                    </p>
+                </div>
+            </div>
+
+            <!-- FORM GURU, PENILAI, & MADRASAH -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                
+                <!-- GURU YANG DINILAI -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
+                    <div class="border-b pb-3 border-slate-100 flex items-center justify-between">
+                        <h2 class="font-bold text-slate-800 text-lg flex items-center space-x-2">
+                            <i class="fa-solid fa-user-gear text-emerald-600"></i>
+                            <span>Data Guru Yang Dinilai</span>
+                        </h2>
+                        <span class="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded font-semibold" x-text="identitas.tingkat"></span>
+                    </div>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tingkat Madrasah</label>
+                            <select x-model="identitas.tingkat" @change="onTingkatChange()" class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2 border">
+                                <option value="RA">RA (Raudhatul Athfal)</option>
+                                <option value="MI">MI (Madrasah Ibtidaiyah)</option>
+                                <option value="MTs">MTs (Madrasah Tsanawiyah)</option>
+                                <option value="MA">MA (Madrasah Aliyah / MAK)</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jenis Guru / Tugas Utama</label>
+                            <select x-model="identitas.jenisGuru" @change="onJenisGuruChange()" class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2 border">
+                                <option value="MapelKelas">Guru Kelas / Guru Mata Pelajaran</option>
+                                <option value="BK">Guru BK (Bimbingan Konseling)</option>
+                                <option value="TIK">Guru TIK (Teknologi Informasi)</option>
+                                <option value="RA" x-show="identitas.tingkat === 'RA'">Guru Kelas RA</option>
+                            </select>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Bidang Studi / Mata Pelajaran yang Diampu</label>
+                            <select x-model="identitas.bidangStudi" class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2 border">
+                                <template x-for="item in matpelOptions[identitas.tingkat]" :key="item">
+                                    <option :value="item" x-text="item"></option>
+                                </template>
+                            </select>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Tugas Tambahan Relevan (Jika ada)</label>
+                            <select x-model="identitas.tugasTambahan" class="w-full text-sm border-slate-300 rounded-lg shadow-sm focus:border-emerald-500 focus:ring-emerald-500 p-2 border">
+                                <option value="Tanpa">Tidak Ada Tugas Tambahan</option>
+                                <option value="Wakamad">Wakil Kepala Madrasah (Wakamad)</option>
+                                <option value="Perpustakaan">Kepala Perpustakaan Madrasah</option>
+                                <option value="Laboratorium">Kepala Laboratorium / Bengkel</option>
+                                <option value="Asrama">Pembina Asrama Madrasah</option>
+                            </select>
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Lengkap & Gelar</label>
+                            <input type="text" x-model="identitas.namaGuru" placeholder="Contoh: Ahmad Fauzi, S.Pd.I., M.Pd." class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">NIP / NPTK</label>
+                            <input type="text" x-model="identitas.nipGuru" placeholder="19850101 201001 1 001" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">NPK / NUPTK</label>
+                            <input type="text" x-model="identitas.npkGuru" placeholder="9876543210123" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Pangkat / Golongan Ruang</label>
+                            <select x-model="identitas.golonganGuru" @change="autoFillAngkaKreditDefaults()" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                                <option value="III/a">Penata Muda (III/a)</option>
+                                <option value="III/b">Penata Muda Tk.I (III/b)</option>
+                                <option value="III/c">Penata (III/c)</option>
+                                <option value="III/d">Penata Tk.I (III/d)</option>
+                                <option value="IV/a">Pembina (IV/a)</option>
+                                <option value="IV/b">Pembina Tk.I (IV/b)</option>
+                                <option value="IV/c">Pembina Utama Muda (IV/c)</option>
+                                <option value="NonPNS">Non-PNS / P3K</option>
+                            </select>
+                        </div>
+
+                        <div>
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Jabatan Guru</label>
+                            <input type="text" x-model="identitas.jabatanGuru" placeholder="Guru Ahli Muda" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                        </div>
+
+                        <div class="sm:col-span-2">
+                            <label class="block text-xs font-semibold text-slate-600 mb-1">Unit Kerja / Nama Madrasah</label>
+                            <input type="text" x-model="identitas.namaMadrasah" placeholder="MAN 1 Kota Malang" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                        </div>
+                    </div>
+                </div>
+
+                <!-- PENILAI, ATASAN, & PARAMETER AK -->
+                <div class="space-y-6">
+                    
+                    <!-- DATA PENILAI -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
+                        <div class="border-b pb-3 border-slate-100">
+                            <h2 class="font-bold text-slate-800 text-lg flex items-center space-x-2">
+                                <i class="fa-solid fa-user-check text-blue-600"></i>
+                                <span>Data Penilai & Atasan Penilai</span>
+                            </h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Penilai</label>
+                                <input type="text" x-model="identitas.namaPenilai" placeholder="Drs. H. Muhammad Ridwan" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">NIP Penilai</label>
+                                <input type="text" x-model="identitas.nipPenilai" placeholder="19750202 200212 1 002" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Jabatan Penilai</label>
+                                <input type="text" x-model="identitas.jabatanPenilai" placeholder="Guru Ahli Madya / Pengawas" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">No SK Penugasan Penilai</label>
+                                <input type="text" x-model="identitas.skPenilai" placeholder="B-124/Ma.13/PP.00.6/01/2026" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                            </div>
+
+                            <div class="sm:col-span-2 border-t pt-3 border-slate-100">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Kepala Madrasah / Atasan Langsung Penilai</label>
+                                <input type="text" x-model="identitas.namaKepala" placeholder="Dr. H. Sulaiman, M.Ag." class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                            </div>
+
+                            <div class="sm:col-span-2">
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">NIP Kepala Madrasah</label>
+                                <input type="text" x-model="identitas.nipKepala" placeholder="19700303 199803 1 003" class="w-full text-sm border-slate-300 rounded-lg shadow-sm p-2 border">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- PARAMETER PENILAIAN & ANGKA KREDIT -->
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 space-y-4">
+                        <div class="border-b pb-3 border-slate-100 flex items-center justify-between">
+                            <h2 class="font-bold text-slate-800 text-base flex items-center space-x-2">
+                                <i class="fa-solid fa-calculator text-amber-600"></i>
+                                <span>Parameter Angka Kredit (AK) Juknis 1843/2021</span>
+                            </h2>
+                            <span class="text-xs text-slate-500">Periode: 1 Tahun</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Target AKK</label>
+                                <input type="number" step="0.1" x-model.number="akConfig.AKK" class="w-full text-sm border-slate-300 rounded p-1.5 border">
+                                <span class="text-[10px] text-slate-400">Kumulatif Target</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">AK PKB Wajib</label>
+                                <input type="number" step="0.1" x-model.number="akConfig.AKPKB" class="w-full text-sm border-slate-300 rounded p-1.5 border">
+                                <span class="text-[10px] text-slate-400">Pengemb. Diri & PI/KI</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">AK Penunjang (AKP)</label>
+                                <input type="number" step="0.1" x-model.number="akConfig.AKP" class="w-full text-sm border-slate-300 rounded p-1.5 border">
+                                <span class="text-[10px] text-slate-400">Maksimal 10%</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Jam Mengajar (JM)</label>
+                                <input type="number" x-model.number="akConfig.JM" class="w-full text-sm border-slate-300 rounded p-1.5 border">
+                                <span class="text-[10px] text-slate-400">JP Per Minggu</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Jam Wajib (JWM)</label>
+                                <input type="number" x-model.number="akConfig.JWM" class="w-full text-sm border-slate-300 rounded p-1.5 border bg-slate-50" readonly>
+                                <span class="text-[10px] text-slate-400">Standar = 24 JP</span>
+                            </div>
+
+                            <div>
+                                <label class="block text-[11px] font-semibold text-slate-600 mb-1">Tahun Penilaian</label>
+                                <input type="text" x-model="identitas.tahun" class="w-full text-sm border-slate-300 rounded p-1.5 border">
+                                <span class="text-[10px] text-slate-400">Tahun Anggaran</span>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-4">
+                <button @click="activeTab = 'penilaian'" class="bg-kemenag-700 hover:bg-kemenag-800 text-white font-semibold px-6 py-2.5 rounded-lg shadow flex items-center space-x-2 transition">
+                    <span>Lanjut ke Instrumen Penilaian</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 2: INSTRUMEN PENILAIAN ==================== -->
+        <div x-show="activeTab === 'penilaian'" x-transition class="space-y-6">
+            
+            <!-- RINGKASAN PROGRESS SCORE -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 sticky top-16 z-40 flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center space-x-4">
+                    <div class="bg-kemenag-100 text-kemenag-800 font-extrabold text-xl px-3 py-2 rounded-lg border border-kemenag-300">
+                        <span x-text="calcTotalScore().skara100.toFixed(2)"></span>
+                    </div>
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-xs text-slate-500 uppercase font-semibold">Skor Akhir PKG:</span>
+                            <span class="text-xs px-2 py-0.5 rounded font-bold"
+                                  :class="getSebutanBadgeClass(calcTotalScore().sebuatan)"
+                                  x-text="calcTotalScore().sebuatan"></span>
+                        </div>
+                        <p class="text-xs text-slate-600 mt-0.5">
+                            NPK: <strong class="text-emerald-700" x-text="calcTotalScore().npk + '%'"></strong> | Target AK/Thn: <strong class="text-blue-700" x-text="calcAngkaKredit().toFixed(3)"></strong>
+                        </p>
+                    </div>
+                </div>
+
+                <!-- FILTER CATEGORY -->
+                <div class="flex space-x-1 overflow-x-auto text-xs">
+                    <button @click="selectedCategory = 'semua'" :class="selectedCategory === 'semua' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="px-3 py-1.5 rounded-md font-medium transition">Semua</button>
+                    <button @click="selectedCategory = 'Pedagogik'" :class="selectedCategory === 'Pedagogik' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="px-3 py-1.5 rounded-md font-medium transition">Pedagogik (1-7)</button>
+                    <button @click="selectedCategory = 'Kepribadian'" :class="selectedCategory === 'Kepribadian' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="px-3 py-1.5 rounded-md font-medium transition">Kepribadian (8-10)</button>
+                    <button @click="selectedCategory = 'Sosial'" :class="selectedCategory === 'Sosial' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="px-3 py-1.5 rounded-md font-medium transition">Sosial (11-12)</button>
+                    <button @click="selectedCategory = 'Profesional'" :class="selectedCategory === 'Profesional' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'" class="px-3 py-1.5 rounded-md font-medium transition">Profesional (13-14)</button>
+                    <button x-show="identitas.tugasTambahan !== 'Tanpa'" @click="selectedCategory = 'TugasTambahan'" :class="selectedCategory === 'TugasTambahan' ? 'bg-amber-600 text-white' : 'bg-amber-100 text-amber-800 hover:bg-amber-200'" class="px-3 py-1.5 rounded-md font-medium transition">Tugas Tambahan</button>
+                </div>
+            </div>
+
+            <!-- KOMPETENSI ACCORDIONS / CARDS -->
+            <div class="space-y-4">
+                <template x-for="(komp, index) in filteredCompetencies()" :key="komp.id">
+                    <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden transition">
+                        
+                        <!-- CARD HEADER -->
+                        <div @click="komp.open = !komp.open" class="p-4 bg-slate-50 hover:bg-slate-100/80 cursor-pointer flex items-center justify-between border-b border-slate-200 select-none">
+                            <div class="flex items-center space-x-3">
+                                <span class="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold text-sm flex items-center justify-center shadow-sm" x-text="komp.id"></span>
+                                <div>
+                                    <span class="text-[10px] font-bold tracking-wider uppercase text-emerald-700" x-text="komp.kategori"></span>
+                                    <h3 class="font-bold text-slate-800 text-sm sm:text-base leading-snug" x-text="komp.nama"></h3>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center space-x-4">
+                                <div class="text-right hidden sm:block">
+                                    <div class="text-xs text-slate-500">Nilai Skala: <strong class="text-slate-800" x-text="calcKompScore(komp).skalare"></strong> / 4</div>
+                                    <div class="text-[10px] text-slate-400">Skor: <span x-text="calcKompScore(komp).totalSkor"></span>/<span x-text="calcKompScore(komp).maxSkor"></span> (<span x-text="calcKompScore(komp).persen.toFixed(0)"></span>%)</div>
+                                </div>
+                                <i class="fa-solid text-slate-400 transition-transform duration-200" :class="komp.open ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+                            </div>
+                        </div>
+
+                        <!-- CARD BODY / INDIKATOR SCORING -->
+                        <div x-show="komp.open" x-transition class="p-4 space-y-4 bg-white">
+                            <p class="text-xs text-slate-600 italic border-l-2 border-emerald-500 pl-3 py-1 bg-emerald-50/50 rounded-r">
+                                Skor Penilaian: <strong>0</strong> = Tidak Terpenuhi | <strong>1</strong> = Terpenuhi Sebagian | <strong>2</strong> = Terpenuhi Seluruhnya
+                            </p>
+
+                            <div class="divide-y divide-slate-100">
+                                <template x-for="(ind, idx) in komp.indikator" :key="idx">
+                                    <div class="py-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/60 p-2 rounded-lg transition">
+                                        <div class="text-xs sm:text-sm text-slate-700 flex items-start space-x-2">
+                                            <span class="font-bold text-slate-400 flex-shrink-0" x-text="(index+1) + '.' + (idx+1)"></span>
+                                            <span x-text="ind.teks"></span>
+                                        </div>
+
+                                        <!-- RADIO SCORE OPTIONS -->
+                                        <div class="flex items-center space-x-2 flex-shrink-0 self-end sm:self-center">
+                                            <label class="cursor-pointer px-3 py-1 rounded-md border text-xs font-semibold transition flex items-center space-x-1"
+                                                   :class="ind.skor === 0 ? 'bg-rose-600 text-white border-rose-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'">
+                                                <input type="radio" :name="'komp_' + komp.id + '_ind_' + idx" :value="0" x-model.number="ind.skor" class="sr-only">
+                                                <span>0</span>
+                                            </label>
+
+                                            <label class="cursor-pointer px-3 py-1 rounded-md border text-xs font-semibold transition flex items-center space-x-1"
+                                                   :class="ind.skor === 1 ? 'bg-amber-500 text-white border-amber-500 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'">
+                                                <input type="radio" :name="'komp_' + komp.id + '_ind_' + idx" :value="1" x-model.number="ind.skor" class="sr-only">
+                                                <span>1</span>
+                                            </label>
+
+                                            <label class="cursor-pointer px-3 py-1 rounded-md border text-xs font-semibold transition flex items-center space-x-1"
+                                                   :class="ind.skor === 2 ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm' : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-100'">
+                                                <input type="radio" :name="'komp_' + komp.id + '_ind_' + idx" :value="2" x-model.number="ind.skor" class="sr-only">
+                                                <span>2</span>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+
+                            <div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs bg-slate-50 p-2 rounded">
+                                <span class="font-semibold text-slate-600">Catatan Pengamatan / Fakta Penilai:</span>
+                                <input type="text" x-model="komp.catatan" placeholder="Tulis catatan bukti fisik / observasi..." class="w-2/3 border-slate-300 rounded text-xs p-1 border">
+                            </div>
+                        </div>
+
+                    </div>
+                </template>
+            </div>
+
+            <div class="flex justify-between pt-4">
+                <button @click="activeTab = 'identitas'" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-6 py-2.5 rounded-lg transition flex items-center space-x-2">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Kembali ke Data Utama</span>
+                </button>
+
+                <button @click="activeTab = 'bkn'" class="bg-kemenag-700 hover:bg-kemenag-800 text-white font-semibold px-6 py-2.5 rounded-lg shadow flex items-center space-x-2 transition">
+                    <span>Lihat Hasil & Integrasi e-Kinerja BKN</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 3: HASIL & INTEGRASI E-KINERJA BKN ==================== -->
+        <div x-show="activeTab === 'bkn'" x-transition class="space-y-6">
+            
+            <!-- EXECUTIVE CARDS SUMMARY -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Nilai PKG Skala 100</span>
+                    <div class="text-3xl font-extrabold text-slate-800 mt-2" x-text="calcTotalScore().skara100.toFixed(2)"></div>
+                    <span class="inline-block mt-2 px-3 py-0.5 rounded text-xs font-bold"
+                          :class="getSebutanBadgeClass(calcTotalScore().sebuatan)"
+                          x-text="calcTotalScore().sebuatan"></span>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">NPK (Nilai Persentase)</span>
+                    <div class="text-3xl font-extrabold text-emerald-600 mt-2" x-text="calcTotalScore().npk + '%'"></div>
+                    <span class="text-[10px] text-slate-400 mt-1 block">Konversi Tabel Pendis 1843</span>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Angka Kredit Pembelajaran</span>
+                    <div class="text-3xl font-extrabold text-blue-600 mt-2" x-text="calcAngkaKredit().toFixed(3)"></div>
+                    <span class="text-[10px] text-slate-400 mt-1 block">Rekomendasi PAK Tahunan</span>
+                </div>
+
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200 text-center">
+                    <span class="text-xs uppercase font-bold text-slate-400 tracking-wider">Predikat e-Kinerja BKN</span>
+                    <div class="text-2xl font-extrabold text-amber-600 mt-2" x-text="mapBknPredikat().predikat"></div>
+                    <span class="text-[10px] text-slate-400 mt-1 block" x-text="'Hasil Kerja: ' + mapBknPredikat().hasilKerja"></span>
+                </div>
+
+            </div>
+
+            <!-- DETAIL KALKULASI ANGKA KREDIT FORMULA JUKNIS -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+                <h3 class="font-bold text-slate-800 text-base flex items-center space-x-2 border-b pb-3 border-slate-100">
+                    <i class="fa-solid fa-square-root-variable text-emerald-600"></i>
+                    <span>Rincian Formula Perhitungan Angka Kredit (Kepdirjen Pendis 1843/2021)</span>
+                </h3>
+
+                <div class="bg-slate-50 rounded-lg p-4 text-xs font-mono space-y-2 border border-slate-200 overflow-x-auto">
+                    <div>Formula Pembelajaran Guru PNS:</div>
+                    <div class="text-emerald-700 font-bold text-sm">
+                        Angka Kredit / Tahun = [ (AKK - AKPKB - AKP) x (JM / JWM) x NPK ] / 4
+                    </div>
+                    <div class="pt-2 text-slate-600 divide-y divide-slate-200">
+                        <div class="py-1">AKK (Target Kumulatif): <span class="font-bold" x-text="akConfig.AKK"></span></div>
+                        <div class="py-1">AKPKB (Wajib PD & PI/KI): <span class="font-bold" x-text="akConfig.AKPKB"></span></div>
+                        <div class="py-1">AKP (Penunjang Max): <span class="font-bold" x-text="akConfig.AKP"></span></div>
+                        <div class="py-1">Angka Kredit Dasar = <span x-text="akConfig.AKK"></span> - <span x-text="akConfig.AKPKB"></span> - <span x-text="akConfig.AKP"></span> = <strong x-text="(akConfig.AKK - akConfig.AKPKB - akConfig.AKP).toFixed(2)"></strong></div>
+                        <div class="py-1">Proporsi Jam (JM/JWM) = <span x-text="akConfig.JM"></span> / <span x-text="akConfig.JWM"></span> = <strong x-text="(akConfig.JM / akConfig.JWM).toFixed(3)"></strong></div>
+                        <div class="py-1">Nilai Persentase Kinerja (NPK) = <strong x-text="calcTotalScore().npk + '%'"></strong></div>
+                        <div class="py-1 text-blue-700 font-bold">Hasil Akhir AK = [ <span x-text="(akConfig.AKK - akConfig.AKPKB - akConfig.AKP).toFixed(2)"></span> x <span x-text="(akConfig.JM / akConfig.JWM).toFixed(3)"></span> x <span x-text="(calcTotalScore().npk/100)"></span> ] / 4 = <span x-text="calcAngkaKredit().toFixed(3)"></span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- E-KINERJA BKN COMPATIBILITY MATRIX CARD -->
+            <div class="bg-gradient-to-br from-slate-900 to-slate-800 text-white rounded-xl shadow-md p-6 space-y-5">
+                <div class="flex items-center justify-between border-b border-slate-700 pb-3">
+                    <div class="flex items-center space-x-3">
+                        <div class="w-10 h-10 bg-amber-500 text-slate-900 rounded-lg flex items-center justify-center font-bold text-lg">
+                            <i class="fa-solid fa-building-columns"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-base text-amber-400">Integrasi Pelaporan e-Kinerja BKN (PermenPANRB No. 6/2022)</h3>
+                            <p class="text-xs text-slate-300">Konversi Otomatis Penilaian Kinerja Guru Ke Matriks Hasil Kerja & Perilaku BKN</p>
+                        </div>
+                    </div>
+                    <span class="bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs px-3 py-1 rounded-full font-semibold">Format Standard BKN</span>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    
+                    <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
+                        <span class="text-xs text-slate-400 font-medium block mb-1">Capaian Hasil Kerja (BKN)</span>
+                        <div class="text-lg font-bold text-emerald-400" x-text="mapBknPredikat().hasilKerja"></div>
+                        <p class="text-[11px] text-slate-400 mt-2">Didasarkan pada persentase NPK Madrasah (<span x-text="calcTotalScore().npk"></span>%).</p>
+                    </div>
+
+                    <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
+                        <span class="text-xs text-slate-400 font-medium block mb-1">Perilaku Kerja Pegawai (BerAKHLAK)</span>
+                        <div class="text-lg font-bold text-blue-400" x-text="mapBknPredikat().perilakuKerja"></div>
+                        <p class="text-[11px] text-slate-400 mt-2">Didasarkan pada rerata kompetensi Kepribadian & Sosial.</p>
+                    </div>
+
+                    <div class="bg-slate-800/80 p-4 rounded-lg border border-slate-700">
+                        <span class="text-xs text-slate-400 font-medium block mb-1">Predikat Kinerja Pegawai BKN</span>
+                        <div class="text-xl font-extrabold text-amber-400" x-text="mapBknPredikat().predikat"></div>
+                        <p class="text-[11px] text-slate-400 mt-2">Menjadi dasar penetapan SKP dan Angka Kredit di SI-ASN BKN.</p>
+                    </div>
+
+                </div>
+
+                <div class="bg-slate-800 p-4 rounded-lg border border-slate-700 text-xs space-y-2">
+                    <span class="font-bold text-amber-300 block">Teks Salin Rangkuman Untuk e-Kinerja BKN:</span>
+                    <textarea readonly class="w-full bg-slate-900 border border-slate-700 rounded p-2 text-slate-300 font-mono text-[11px] h-24 focus:outline-none"
+                              x-text="generateBknSummaryText()"></textarea>
+                    <div class="flex justify-end">
+                        <button @click="copyBknSummary()" class="bg-amber-500 hover:bg-amber-400 text-slate-900 font-bold px-3 py-1 rounded text-xs flex items-center space-x-1">
+                            <i class="fa-solid fa-copy"></i>
+                            <span>Salin Ringkasan</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ACTION BUTTONS -->
+            <div class="flex flex-wrap justify-between gap-4 pt-4">
+                <button @click="activeTab = 'penilaian'" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold px-6 py-2.5 rounded-lg transition flex items-center space-x-2">
+                    <i class="fa-solid fa-arrow-left"></i>
+                    <span>Kembali ke Penilaian</span>
+                </button>
+
+                <div class="flex space-x-3">
+                    <button @click="triggerPrint()" class="bg-blue-600 hover:bg-blue-500 text-white font-semibold px-6 py-2.5 rounded-lg shadow transition flex items-center space-x-2">
+                        <i class="fa-solid fa-file-pdf"></i>
+                        <span>Cetak Dokumen Resmi / PDF</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- ==================== TAB 4: RIWAYAT & BERKAS ==================== -->
+        <div x-show="activeTab === 'kelola'" x-transition class="space-y-6">
+            
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+                <div class="flex items-center justify-between border-b pb-4 border-slate-100">
+                    <div>
+                        <h2 class="font-bold text-slate-800 text-lg flex items-center space-x-2">
+                            <i class="fa-solid fa-folder-open text-emerald-600"></i>
+                            <span>Kelola Data PKG Tersimpan (Local Storage)</span>
+                        </h2>
+                        <p class="text-xs text-slate-500 mt-1">Simpan, muat ulang, atau ekspor/impor data penilaian kinerja guru ke berkas JSON.</p>
+                    </div>
+
+                    <button @click="createNewDraft()" class="bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs px-4 py-2 rounded-lg shadow transition flex items-center space-x-1.5">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>Buat Penilaian Baru</span>
+                    </button>
+                </div>
+
+                <!-- TABLE OF SAVED DRAFTS -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left text-slate-600">
+                        <thead class="bg-slate-100 text-slate-700 font-bold uppercase border-b">
+                            <tr>
+                                <th class="p-3">Nama Guru</th>
+                                <th class="p-3">Tingkat / Mapel</th>
+                                <th class="p-3">Madrasah</th>
+                                <th class="p-3">Skor PKG</th>
+                                <th class="p-3">AK/Thn</th>
+                                <th class="p-3">Tanggal Disimpan</th>
+                                <th class="p-3 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            <template x-for="(draft, idx) in savedDrafts" :key="draft.id">
+                                <tr class="hover:bg-slate-50">
+                                    <td class="p-3 font-bold text-slate-800" x-text="draft.identitas.namaGuru || 'Tanpa Nama'"></td>
+                                    <td class="p-3" x-text="draft.identitas.tingkat + ' - ' + draft.identitas.bidangStudi"></td>
+                                    <td class="p-3" x-text="draft.identitas.namaMadrasah"></td>
+                                    <td class="p-3 font-semibold text-emerald-700" x-text="draft.skorAkhir.toFixed(2)"></td>
+                                    <td class="p-3 font-semibold text-blue-700" x-text="draft.angkaKredit.toFixed(3)"></td>
+                                    <td class="p-3 text-slate-400" x-text="draft.updatedAt"></td>
+                                    <td class="p-3 text-center space-x-1">
+                                        <button @click="loadDraft(draft)" class="bg-blue-100 text-blue-700 hover:bg-blue-200 px-2 py-1 rounded font-semibold transition">Buka</button>
+                                        <button @click="deleteDraft(draft.id)" class="bg-rose-100 text-rose-700 hover:bg-rose-200 px-2 py-1 rounded font-semibold transition">Hapus</button>
+                                    </td>
+                                </tr>
+                            </template>
+                            <template x-if="savedDrafts.length === 0">
+                                <tr>
+                                    <td colspan="7" class="p-6 text-center text-slate-400 italic">Belum ada draft penilaian tersimpan di Local Storage.</td>
+                                </tr>
+                            </template>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- EXPORT & IMPORT BACKUP -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-6 space-y-4">
+                <h3 class="font-bold text-slate-800 text-base flex items-center space-x-2 border-b pb-3 border-slate-100">
+                    <i class="fa-solid fa-file-import text-blue-600"></i>
+                    <span>Ekspor / Impor Berkas Penilaian (Backup JSON)</span>
+                </h3>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-2">
+                        <span class="font-bold text-xs text-slate-700 block">Ekspor Data Aktif</span>
+                        <p class="text-xs text-slate-500">Unduh seluruh instrumen dan skor PKG saat ini dalam bentuk file `.json` untuk diarsipkan.</p>
+                        <button @click="exportJsonBackup()" class="bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs px-4 py-2 rounded shadow transition flex items-center space-x-2">
+                            <i class="fa-solid fa-download"></i>
+                            <span>Unduh Backup JSON</span>
+                        </button>
+                    </div>
+
+                    <div class="border border-slate-200 rounded-lg p-4 bg-slate-50 space-y-2">
+                        <span class="font-bold text-xs text-slate-700 block">Impor Berkas JSON</span>
+                        <p class="text-xs text-slate-500">Unggah berkas backup JSON yang pernah diunduh sebelumnya.</p>
+                        <input type="file" @change="importJsonBackup($event)" accept=".json" class="text-xs text-slate-500 file:mr-3 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-emerald-100 file:text-emerald-700 hover:file:bg-emerald-200">
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </main>
+
+    <!-- ==================== PRINT / PDF PRINTABLE REPORT LAYOUT ==================== -->
+    <div class="print-only max-w-4xl mx-auto p-4 bg-white text-black font-serif">
+        
+        <!-- HEADER KOP SURAT MADRASAH -->
+        <div class="text-center border-b-4 border-black pb-3 mb-6">
+            <h2 class="text-lg font-bold uppercase tracking-wider">KEMENTERIAN AGAMA REPUBLIK INDONESIA</h2>
+            <h3 class="text-base font-bold uppercase" x-text="identitas.namaMadrasah"></h3>
+            <p class="text-xs font-sans italic mt-1">Laporan Penilaian Kinerja Guru (PKG) Berdasarkan Kepdirjen Pendis No. 1843 Tahun 2021</p>
+        </div>
+
+        <!-- REKAPITULASI LAPORAN (FORMAT LAMPIRAN 1C) -->
+        <div class="mb-6">
+            <h3 class="text-center text-sm font-bold uppercase mb-4 border-b border-black pb-1">LAMPIRAN 1C: REKAPITULASI HASIL PENILAIAN KINERJA GURU</h3>
+            
+            <table class="w-full text-xs border-collapse border border-black mb-4">
+                <tr>
+                    <td class="border border-black p-1.5 font-bold bg-gray-100" sm:w-1/4>Nama Guru</td>
+                    <td class="border border-black p-1.5" x-text="identitas.namaGuru"></td>
+                    <td class="border border-black p-1.5 font-bold bg-gray-100">NIP/NPK</td>
+                    <td class="border border-black p-1.5" x-text="identitas.nipGuru || identitas.npkGuru"></td>
+                </tr>
+                <tr>
+                    <td class="border border-black p-1.5 font-bold bg-gray-100">Pangkat / Golongan</td>
+                    <td class="border border-black p-1.5" x-text="identitas.golonganGuru"></td>
+                    <td class="border border-black p-1.5 font-bold bg-gray-100">Jabatan Guru</td>
+                    <td class="border border-black p-1.5" x-text="identitas.jabatanGuru"></td>
+                </tr>
+                <tr>
+                    <td class="border border-black p-1.5 font-bold bg-gray-100">Tingkat / Matpel</td>
+                    <td class="border border-black p-1.5" x-text="identitas.tingkat + ' - ' + identitas.bidangStudi"></td>
+                    <td class="border border-black p-1.5 font-bold bg-gray-100">Tahun Penilaian</td>
+                    <td class="border border-black p-1.5" x-text="identitas.tahun"></td>
+                </tr>
+            </table>
+
+            <!-- TABLE KOMPETENSI REKAP -->
+            <table class="w-full text-xs border-collapse border border-black text-center mb-4">
+                <thead>
+                    <tr class="bg-gray-200">
+                        <th class="border border-black p-1">No</th>
+                        <th class="border border-black p-1 text-left">Domain Kompetensi Guru</th>
+                        <th class="border border-black p-1">Jumlah Indikator</th>
+                        <th class="border border-black p-1">Skor Maksimal</th>
+                        <th class="border border-black p-1">Skor Perolehan</th>
+                        <th class="border border-black p-1">Nilai Skala (1-4)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template x-for="komp in competencies" :key="komp.id">
+                        <tr>
+                            <td class="border border-black p-1" x-text="komp.id"></td>
+                            <td class="border border-black p-1 text-left" x-text="komp.nama"></td>
+                            <td class="border border-black p-1" x-text="komp.indikator.length"></td>
+                            <td class="border border-black p-1" x-text="komp.indikator.length * 2"></td>
+                            <td class="border border-black p-1" x-text="calcKompScore(komp).totalSkor"></td>
+                            <td class="border border-black p-1 font-bold" x-text="calcKompScore(komp).skalare"></td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <!-- REKAP HASIL PERHITUNGAN -->
+            <table class="w-full text-xs border-collapse border border-black">
+                <tr class="bg-gray-100">
+                    <td class="border border-black p-2 font-bold" width="60%">Total Skor Kinerja Evaluasi (Skala 100)</td>
+                    <td class="border border-black p-2 font-bold text-center text-sm" x-text="calcTotalScore().skara100.toFixed(2)"></td>
+                </tr>
+                <tr>
+                    <td class="border border-black p-2 font-bold">Sebutan Kinerja (Kepdirjen Pendis 1843)</td>
+                    <td class="border border-black p-2 font-bold text-center" x-text="calcTotalScore().sebuatan"></td>
+                </tr>
+                <tr>
+                    <td class="border border-black p-2 font-bold">Persentase Kinerja (NPK)</td>
+                    <td class="border border-black p-2 font-bold text-center" x-text="calcTotalScore().npk + '%'"></td>
+                </tr>
+                <tr class="bg-gray-100">
+                    <td class="border border-black p-2 font-bold">Perolehan Angka Kredit Tahunan (Rekomendasi PAK)</td>
+                    <td class="border border-black p-2 font-bold text-center text-sm" x-text="calcAngkaKredit().toFixed(3)"></td>
+                </tr>
+                <tr>
+                    <td class="border border-black p-2 font-bold">Konversi Predikat Kinerja e-Kinerja BKN</td>
+                    <td class="border border-black p-2 font-bold text-center" x-text="mapBknPredikat().predikat"></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- TANDA TANGAN DOKUMEN -->
+        <div class="mt-12 text-xs grid grid-cols-2 gap-8 page-break-inside-avoid">
+            <div class="text-center">
+                <p>Mengetahui,</p>
+                <p class="font-bold">Kepala Madrasah / Atasan Langsung</p>
+                <div class="h-20"></div>
+                <p class="font-bold underline" x-text="identitas.namaKepala || '________________________'"></p>
+                <p x-text="'NIP. ' + (identitas.nipKepala || '....................................')"></p>
+            </div>
+
+            <div class="text-center">
+                <p x-text="'Malang, 31 Desember ' + identitas.tahun"></p>
+                <p class="font-bold">Penilai Kinerja Guru</p>
+                <div class="h-20"></div>
+                <p class="font-bold underline" x-text="identitas.namaPenilai || '________________________'"></p>
+                <p x-text="'NIP. ' + (identitas.nipPenilai || '....................................')"></p>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- FOOTER (No Print) -->
+    <footer class="no-print bg-slate-900 text-slate-400 text-xs py-4 border-t border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 text-center flex flex-col sm:flex-row justify-between items-center gap-2">
+            <div>
+                © 2026 Aplikasi Penilaian Kinerja Guru Madrasah | Kepdirjen Pendis 1843/2021 & e-Kinerja BKN
+            </div>
+            <div class="text-slate-400 font-medium">
+                Sistem Evaluasi Mandiri RA, MI, MTs & MA | Developed by : D.E.A 2026
+            </div>
+        </div>
+    </footer>
+
+    <!-- JAVASCRIPT LOGIC VIA ALPINE JS -->
+    <script>
+        function pkgApp() {
+            return {
+                activeTab: 'identitas',
+                selectedCategory: 'semua',
+                toast: { show: false, message: '', type: 'success' },
+                savedDrafts: [],
+
+                // MASTER MATEMATIKA MAPEL PER TINGKATAN
+                matpelOptions: {
+                    RA: ['Guru Kelas RA', 'Guru Pendamping RA'],
+                    MI: [
+                        'Guru Kelas MI', 
+                        'Al-Qur\'an Hadis', 
+                        'Akidah Akhlak', 
+                        'Fiqih', 
+                        'Sejarah Kebudayaan Islam (SKI)', 
+                        'Bahasa Arab', 
+                        'Bahasa Indonesia', 
+                        'Matematika', 
+                        'IPA', 
+                        'IPS', 
+                        'Pendidikan Pancasila / PKn', 
+                        'PJOK', 
+                        'Seni Budaya & Prakarya'
+                    ],
+                    MTs: [
+                        'Al-Qur\'an Hadis', 
+                        'Akidah Akhlak', 
+                        'Fiqih', 
+                        'Sejarah Kebudayaan Islam (SKI)', 
+                        'Bahasa Arab', 
+                        'Bahasa Indonesia', 
+                        'Bahasa Inggris', 
+                        'Matematika', 
+                        'IPA Terpadu', 
+                        'IPS Terpadu', 
+                        'PPKn / Pendidikan Pancasila', 
+                        'PJOK', 
+                        'Seni Budaya', 
+                        'Prakarya / Informatika', 
+                        'Bimbingan Konseling (BK)'
+                    ],
+                    MA: [
+                        'Al-Qur\'an Hadis', 
+                        'Akidah Akhlak', 
+                        'Fiqih', 
+                        'Sejarah Kebudayaan Islam (SKI)', 
+                        'Bahasa Arab', 
+                        'Bahasa Indonesia', 
+                        'Bahasa Inggris', 
+                        'Matematika', 
+                        'Fisika', 
+                        'Kimia', 
+                        'Biologi', 
+                        'Ekonomi', 
+                        'Sosiologi', 
+                        'Geografi', 
+                        'Sejarah', 
+                        'PPKn', 
+                        'PJOK', 
+                        'Seni Budaya', 
+                        'Prakarya & Kewirausahaan', 
+                        'Informatika', 
+                        'Bimbingan Konseling (BK)'
+                    ]
+                },
+
+                // DATA IDENTITAS GURU & PENILAI
+                identitas: {
+                    tingkat: 'MTs',
+                    jenisGuru: 'MapelKelas',
+                    bidangStudi: 'Al-Qur\'an Hadis',
+                    tugasTambahan: 'Tanpa',
+                    namaGuru: '',
+                    nipGuru: '',
+                    npkGuru: '',
+                    golonganGuru: 'III/c',
+                    jabatanGuru: 'Guru Ahli Muda',
+                    namaMadrasah: 'MTs Negeri 1 Malang',
+                    namaPenilai: '',
+                    nipPenilai: '',
+                    jabatanPenilai: 'Guru Ahli Madya',
+                    skPenilai: '',
+                    namaKepala: '',
+                    nipKepala: '',
+                    tahun: '2026'
+                },
+
+                // CONFIG ANGKA KREDIT FORMULA
+                akConfig: {
+                    AKK: 100,
+                    AKPKB: 9,
+                    AKP: 10,
+                    JM: 24,
+                    JWM: 24
+                },
+
+                // INSTRUMEN 14 KOMPETENSI REKAP KEPDIRJEN PENDIS 1843/2021
+                competencies: [
+                    {
+                        id: 1, kategori: 'Pedagogik', nama: '1. Mengenal karakteristik peserta didik', open: true, catatan: '',
+                        indikator: [
+                            { teks: 'Guru mengidentifikasi karakteristik belajar setiap peserta didik di kelasnya.', skor: 2 },
+                            { teks: 'Guru memastikan semua peserta didik mendapat kesempatan yang sama untuk berpartisipasi aktif.', skor: 2 },
+                            { teks: 'Guru mengatur kelas untuk memberikan kesempatan belajar bagi siswa berbeda kemampuan/fisik.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 2, kategori: 'Pedagogik', nama: '2. Menguasai teori belajar dan prinsip-prinsip pembelajaran', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru memberi kesempatan peserta didik menguasai materi sesuai usia dan kemampuannya.', skor: 2 },
+                            { teks: 'Guru memastikan pemahaman peserta didik sebelum melanjutkan aktivitas pembelajaran.', skor: 2 },
+                            { teks: 'Guru dapat menjelaskan alasan pelaksanaan kegiatan/aktivitas pembelajaran.', skor: 2 },
+                            { teks: 'Guru menggunakan berbagai teknik untuk memotivasi kemauan belajar peserta didik.', skor: 2 },
+                            { teks: 'Guru merencanakan kegiatan pembelajaran yang saling berkaitan satu sama lain.', skor: 2 },
+                            { teks: 'Guru memperhatikan respon peserta didik untuk merencanakan perbaikan RPP/MA.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 3, kategori: 'Pedagogik', nama: '3. Pengembangan kurikulum', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru menyusun silabus / ATP yang sesuai dengan kurikulum yang berlaku.', skor: 2 },
+                            { teks: 'Guru merancang RPP / Modul Ajar yang sesuai dengan ATP dan karakteristik peserta didik.', skor: 2 },
+                            { teks: 'Guru mengikuti urutan materi pembelajaran sesuai dengan tujuan pembelajaran.', skor: 2 },
+                            { teks: 'Guru memilih materi yang sesuai dengan konteks kehidupan sehari-hari peserta didik.', skor: 2 },
+                            { teks: 'Guru mengalokasikan waktu yang cukup sesuai materi dan tujuan pembelajaran.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 4, kategori: 'Pedagogik', nama: '4. Kegiatan pembelajaran yang mendidik', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru melaksanakan aktivitas pembelajaran sesuai dengan RPP/Modul Ajar.', skor: 2 },
+                            { teks: 'Guru mengelola kelas secara efektif tanpa mendominasi peserta didik.', skor: 2 },
+                            { teks: 'Guru menggunakan media dan alat bantu pembelajaran yang bervariasi.', skor: 2 },
+                            { teks: 'Guru mengorientasikan peserta didik pada masalah kontekstual yang relevan.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 5, kategori: 'Pedagogik', nama: '5. Memahami dan mengembangkan potensi peserta didik', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru menganalisis hasil belajar untuk mengidentifikasi potensi peserta didik.', skor: 2 },
+                            { teks: 'Guru merancang aktivitas pembelajaran yang mendorong siswa belajar mandiri.', skor: 2 },
+                            { teks: 'Guru memberikan bimbingan kepada peserta didik yang mengalami kesulitan belajar.', skor: 2 },
+                            { teks: 'Guru memberikan kegiatan pengayaan kepada peserta didik berprestasi.', skor: 2 },
+                            { teks: 'Guru memberikan apresiasi terhadap karya dan prestasi peserta didik.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 6, kategori: 'Pedagogik', nama: '6. Komunikasi dengan peserta didik', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru mendengarkan dan memperhatikan pertanyaan/tanggapan peserta didik.', skor: 2 },
+                            { teks: 'Guru menanggapi pertanyaan peserta didik secara tepat, benar, dan santun.', skor: 2 },
+                            { teks: 'Guru menyajikan pertanyaan yang merangsang cara berpikir kritis peserta didik.', skor: 2 },
+                            { teks: 'Guru merespon pertanyaan peserta didik dengan jawaban yang edukatif.', skor: 2 },
+                            { teks: 'Guru menggunakan bahasa yang komunikatif, baik, dan santun.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 7, kategori: 'Pedagogik', nama: '7. Penilaian dan evaluasi pembelajaran', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru menyusun alat penilaian sesuai dengan tujuan pembelajaran.', skor: 2 },
+                            { teks: 'Guru melaksanakan penilaian dengan beragam teknik dan instrumen.', skor: 2 },
+                            { teks: 'Guru menganalisis hasil penilaian untuk mengidentifikasi kelemahan/kekuatan siswa.', skor: 2 },
+                            { teks: 'Guru memanfaatkan hasil evaluasi untuk perbaikan pembelajaran berikutnya.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 8, kategori: 'Kepribadian', nama: '8. Bertindak sesuai norma agama, hukum, dan kebudayaan', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru menghargai dan memperlakukan semua peserta didik secara adil.', skor: 2 },
+                            { teks: 'Guru bersikap sesuai dengan norma agama, hukum, dan tata tertib madrasah.', skor: 2 },
+                            { teks: 'Guru bertindak konsisten sesuai nilai-nilai luhur Pancasila dan moderasi beragama.', skor: 2 },
+                            { teks: 'Guru berpakaian rapi, sopan, dan pantas sebagai keteladanan.', skor: 2 },
+                            { teks: 'Guru menunjukkan sikap menghormati keragaman suku, agama, dan budaya.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 9, kategori: 'Kepribadian', nama: '9. Menunjukkan pribadi yang dewasa dan teladan', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru menampilkan diri sebagai pribadi yang matang, stabil, dan berwibawa.', skor: 2 },
+                            { teks: 'Guru menunjukkan kedisiplinan dan kepatuhan pada aturan kerja.', skor: 2 },
+                            { teks: 'Guru menampilkan diri sebagai contoh teladan bagi peserta didik dan masyarakat.', skor: 2 },
+                            { teks: 'Guru memiliki etos kerja dan tanggung jawab yang tinggi sebagai pendidik.', skor: 2 },
+                            { teks: 'Guru bersikap jujur, terbuka, dan objektif dalam melaksanakan tugas.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 10, kategori: 'Kepribadian', nama: '10. Etos kerja, tanggung jawab, dan rasa bangga menjadi guru', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru mengawali dan mengakhiri pembelajaran tepat waktu.', skor: 2 },
+                            { teks: 'Guru menyelesaikan tugas-tugas administratif dengan tertib.', skor: 2 },
+                            { teks: 'Guru menyelesaikan tugas utama dan tugas tambahan dengan dedikasi.', skor: 2 },
+                            { teks: 'Guru bangga pada profesi pendidik dan berkomitmen pada kualitas pendidikan.', skor: 2 },
+                            { teks: 'Guru proaktif dalam memecahkan masalah pembelajaran di kelas.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 11, kategori: 'Sosial', nama: '11. Bersikap inklusif, objektif, serta tidak diskriminatif', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru bersikap inklusif dan objektif terhadap peserta didik dan kolega.', skor: 2 },
+                            { teks: 'Guru tidak bersikap diskriminatif terhadap latar belakang fisik/sosio-ekonomi.', skor: 2 },
+                            { teks: 'Guru menjaga keharmonisan dan persatuan di lingkungan madrasah.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 12, kategori: 'Sosial', nama: '12. Komunikasi dengan sesama guru, ortu, dan masyarakat', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru berkomunikasi secara efektif dan santun dengan sesama pendidik.', skor: 2 },
+                            { teks: 'Guru menyampaikan informasi perkembangan belajar anak kepada orang tua.', skor: 2 },
+                            { teks: 'Guru mengikutsertakan orang tua dan masyarakat dalam program pembelajaran.', skor: 2 },
+                            { teks: 'Guru merespon masukan dari orang tua dengan terbuka dan konstruktif.', skor: 2 },
+                            { teks: 'Guru berpartisipasi dalam kegiatan kemasyarakatan yang relevan.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 13, kategori: 'Profesional', nama: '13. Penguasaan materi, struktur, dan konsep keilmuan', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru menguasai materi pelajaran yang diajarkan sesuai kurikulum madrasah.', skor: 2 },
+                            { teks: 'Guru memahami keterkaitan konsep antar mata pelajaran yang relevan.', skor: 2 },
+                            { teks: 'Guru mengaplikasikan materi pembelajaran dalam konteks kehidupan nyata.', skor: 2 },
+                            { teks: 'Guru mengintegrasikan nilai-nilai keislaman dan moderasi beragama.', skor: 2 },
+                            { teks: 'Guru senantiasa memperbarui dan memperdalam materi pembelajaran.', skor: 2 }
+                        ]
+                    },
+                    {
+                        id: 14, kategori: 'Profesional', nama: '14. Mengembangkan keprofesionalan melalui tindakan reflektif', open: false, catatan: '',
+                        indikator: [
+                            { teks: 'Guru melakukan refleksi terhadap kinerja pembelajaran secara mandiri.', skor: 2 },
+                            { teks: 'Guru memanfaatkan hasil refleksi untuk perbaikan pembelajaran.', skor: 2 },
+                            { teks: 'Guru aktif mengikuti kegiatan pengembangan keprofesian (MGMP/KKG/Pelatihan).', skor: 2 },
+                            { teks: 'Guru memanfaatkan teknologi informasi untuk pengembangan diri.', skor: 2 },
+                            { teks: 'Guru melakukan penelitian tindakan kelas (PTK) atau karya tulis ilmiah.', skor: 2 },
+                            { teks: 'Guru mempublikasikan karya inovatif/ilmiah atau membagikan praktik baik.', skor: 2 }
+                        ]
+                    }
+                ],
+
+                // INITIALIZATION
+                initApp() {
+                    this.autoFillAngkaKreditDefaults();
+                    this.loadSavedDraftsList();
+                },
+
+                // AUTO FILL GOLONGAN AK TARGETS
+                autoFillAngkaKreditDefaults() {
+                    const gol = this.identitas.golonganGuru;
+                    const defaults = {
+                        'III/a': { AKK: 50, AKPKB: 3, AKP: 5 },
+                        'III/b': { AKK: 50, AKPKB: 7, AKP: 5 },
+                        'III/c': { AKK: 100, AKPKB: 9, AKP: 10 },
+                        'III/d': { AKK: 100, AKPKB: 16, AKP: 10 },
+                        'IV/a': { AKK: 150, AKPKB: 16, AKP: 15 },
+                        'IV/b': { AKK: 150, AKPKB: 16, AKP: 15 },
+                        'IV/c': { AKK: 150, AKPKB: 18, AKP: 15 },
+                        'NonPNS': { AKK: 20, AKPKB: 0, AKP: 0 }
+                    };
+                    if (defaults[gol]) {
+                        this.akConfig.AKK = defaults[gol].AKK;
+                        this.akConfig.AKPKB = defaults[gol].AKPKB;
+                        this.akConfig.AKP = defaults[gol].AKP;
+                    }
+                },
+
+                onTingkatChange() {
+                    const availableMatpels = this.matpelOptions[this.identitas.tingkat];
+                    if (availableMatpels && availableMatpels.length > 0) {
+                        this.identitas.bidangStudi = availableMatpels[0];
+                    }
+                },
+
+                onJenisGuruChange() {
+                    // Adapt if needed
+                },
+
+                filteredCompetencies() {
+                    if (this.selectedCategory === 'semua') return this.competencies;
+                    return this.competencies.filter(c => c.kategori === this.selectedCategory);
+                },
+
+                // CALCULATE INDIVIDUAL COMPETENCY SCORE
+                calcKompScore(komp) {
+                    const totalSkor = komp.indikator.reduce((sum, ind) => sum + ind.skor, 0);
+                    const maxSkor = komp.indikator.length * 2;
+                    const persen = maxSkor > 0 ? (totalSkor / maxSkor) * 100 : 0;
+                    
+                    let skalare = 1;
+                    if (persen > 75) skalare = 4;
+                    else if (persen > 50) skalare = 3;
+                    else if (persen > 25) skalare = 2;
+                    else skalare = 1;
+
+                    return { totalSkor, maxSkor, persen, skalare };
+                },
+
+                // CALCULATE TOTAL OVERALL PKG SCORE
+                calcTotalScore() {
+                    let totalSkala = 0;
+                    const maxSkala = this.competencies.length * 4;
+
+                    this.competencies.forEach(komp => {
+                        totalSkala += this.calcKompScore(komp).skalare;
+                    });
+
+                    const skara100 = maxSkala > 0 ? (totalSkala / maxSkala) * 100 : 0;
+
+                    let sebuatan = 'Buruk';
+                    let npk = 25;
+
+                    if (skara100 >= 91) {
+                        sebuatan = 'Sangat Baik';
+                        npk = 125;
+                    } else if (skara100 >= 76) {
+                        sebuatan = 'Baik';
+                        npk = 100;
+                    } else if (skara100 >= 61) {
+                        sebuatan = 'Cukup';
+                        npk = 75;
+                    } else if (skara100 >= 51) {
+                        sebuatan = 'Kurang';
+                        npk = 50;
+                    } else {
+                        sebuatan = 'Buruk';
+                        npk = 25;
+                    }
+
+                    return { totalSkala, maxSkala, skara100, sebuatan, npk };
+                },
+
+                // CALCULATE ANGKA KREDIT TAHUNAN
+                calcAngkaKredit() {
+                    const baseAk = this.akConfig.AKK - this.akConfig.AKPKB - this.akConfig.AKP;
+                    const proporsiJam = this.akConfig.JM / (this.akConfig.JWM || 24);
+                    const npkPersen = this.calcTotalScore().npk / 100;
+
+                    let akTahunan = (baseAk * proporsiJam * npkPersen) / 4;
+                    if (isNaN(akTahunan) || akTahunan < 0) akTahunan = 0;
+                    return akTahunan;
+                },
+
+                // MAP TO BKN PREDIKAT MATRIKS
+                mapBknPredikat() {
+                    const npk = this.calcTotalScore().npk;
+                    let hasilKerja = 'Diatas Ekspektasi';
+                    let perilakuKerja = 'Sesuai Ekspektasi';
+                    let predikat = 'Sangat Baik';
+
+                    if (npk >= 125) {
+                        hasilKerja = 'Diatas Ekspektasi';
+                        predikat = 'Sangat Baik';
+                    } else if (npk >= 100) {
+                        hasilKerja = 'Sesuai Ekspektasi';
+                        predikat = 'Baik';
+                    } else if (npk >= 75) {
+                        hasilKerja = 'Sesuai Ekspektasi';
+                        predikat = 'Butuh Perbaikan';
+                    } else {
+                        hasilKerja = 'Dibawah Ekspektasi';
+                        predikat = 'Sangat Kurang';
+                    }
+
+                    return { hasilKerja, perilakuKerja, predikat };
+                },
+
+                getSebutanBadgeClass(sebuatan) {
+                    switch (sebuatan) {
+                        case 'Sangat Baik': return 'bg-emerald-100 text-emerald-800 border border-emerald-300';
+                        case 'Baik': return 'bg-blue-100 text-blue-800 border border-blue-300';
+                        case 'Cukup': return 'bg-amber-100 text-amber-800 border border-amber-300';
+                        case 'Kurang': return 'bg-orange-100 text-orange-800 border border-orange-300';
+                        default: return 'bg-rose-100 text-rose-800 border border-rose-300';
+                    }
+                },
+
+                generateBknSummaryText() {
+                    const g = this.identitas;
+                    const res = this.calcTotalScore();
+                    const ak = this.calcAngkaKredit();
+                    const bkn = this.mapBknPredikat();
+                    return `PENILAIAN KINERJA GURU (PKG) & CONVERT e-KINERJA BKN
+------------------------------------------------------
+Nama Guru       : ${g.namaGuru || '-'}
+NIP/NPK         : ${g.nipGuru || g.npkGuru || '-'}
+Tingkat / Mapel : ${g.tingkat} - ${g.bidangStudi}
+Unit Kerja      : ${g.namaMadrasah}
+Tahun           : ${g.tahun}
+------------------------------------------------------
+HASIL PKG PENDIS 1843/2021:
+- Skor Skala 100 : ${res.skara100.toFixed(2)}
+- Sebuatan PKG   : ${res.sebuatan}
+- NPK Persentase : ${res.npk}%
+- Angka Kredit   : ${ak.toFixed(3)} AK/Tahun
+
+KONVERSI MATRIKS e-KINERJA BKN:
+- Capaian Hasil Kerja  : ${bkn.hasilKerja}
+- Rating Perilaku Kerja: ${bkn.perilakuKerja}
+- Predikat Kinerja BKN : ${bkn.predikat}`;
+                },
+
+                copyBknSummary() {
+                    const txt = this.generateBknSummaryText();
+                    navigator.clipboard.writeText(txt).then(() => {
+                        this.showToast('Ringkasan e-Kinerja BKN berhasil disalin!');
+                    }).catch(() => {
+                        // Fallback for iframe copy
+                        const ta = document.createElement('textarea');
+                        ta.value = txt;
+                        document.body.appendChild(ta);
+                        ta.select();
+                        document.execCommand('copy');
+                        document.body.removeChild(ta);
+                        this.showToast('Ringkasan e-Kinerja BKN berhasil disalin!');
+                    });
+                },
+
+                // LOCAL STORAGE ENGINE
+                saveToLocalStorage() {
+                    const payload = {
+                        id: this.currentDraftId || Date.now(),
+                        identitas: this.identitas,
+                        akConfig: this.akConfig,
+                        competencies: this.competencies,
+                        skorAkhir: this.calcTotalScore().skara100,
+                        angkaKredit: this.calcAngkaKredit(),
+                        updatedAt: new Date().toLocaleString('id-ID')
+                    };
+
+                    this.currentDraftId = payload.id;
+                    let drafts = JSON.parse(localStorage.getItem('pkg_madrasah_drafts') || '[]');
+                    const idx = drafts.findIndex(d => d.id === payload.id);
+                    if (idx >= 0) {
+                        drafts[idx] = payload;
+                    } else {
+                        drafts.unshift(payload);
+                    }
+
+                    localStorage.setItem('pkg_madrasah_drafts', JSON.stringify(drafts));
+                    this.loadSavedDraftsList();
+                    this.showToast('Data PKG berhasil disimpan ke Local Storage!');
+                },
+
+                loadSavedDraftsList() {
+                    this.savedDrafts = JSON.parse(localStorage.getItem('pkg_madrasah_drafts') || '[]');
+                },
+
+                loadDraft(draft) {
+                    this.currentDraftId = draft.id;
+                    this.identitas = JSON.parse(JSON.stringify(draft.identitas));
+                    this.akConfig = JSON.parse(JSON.stringify(draft.akConfig));
+                    this.competencies = JSON.parse(JSON.stringify(draft.competencies));
+                    this.activeTab = 'identitas';
+                    this.showToast('Draft PKG ' + (draft.identitas.namaGuru || '') + ' berhasil dimuat!');
+                },
+
+                deleteDraft(id) {
+                    let drafts = JSON.parse(localStorage.getItem('pkg_madrasah_drafts') || '[]');
+                    drafts = drafts.filter(d => d.id !== id);
+                    localStorage.setItem('pkg_madrasah_drafts', JSON.stringify(drafts));
+                    this.loadSavedDraftsList();
+                    this.showToast('Draft berhasil dihapus', 'info');
+                },
+
+                createNewDraft() {
+                    this.currentDraftId = null;
+                    this.identitas.namaGuru = '';
+                    this.identitas.nipGuru = '';
+                    this.identitas.npkGuru = '';
+                    this.competencies.forEach(k => {
+                        k.catatan = '';
+                        k.indikator.forEach(i => i.skor = 2);
+                    });
+                    this.activeTab = 'identitas';
+                    this.showToast('Formulir PKG baru siap diisi.');
+                },
+
+                loadPresetDemo() {
+                    this.identitas = {
+                        tingkat: 'MTs',
+                        jenisGuru: 'MapelKelas',
+                        bidangStudi: 'Al-Qur\'an Hadis',
+                        tugasTambahan: 'Tanpa',
+                        namaGuru: 'H. Lukman Hakim, S.Ag., M.Pd.I.',
+                        nipGuru: '19820512 200912 1 003',
+                        npkGuru: '4589201920831',
+                        golonganGuru: 'III/c',
+                        jabatanGuru: 'Guru Ahli Muda',
+                        namaMadrasah: 'MTs Negeri 1 Kota Malang',
+                        namaPenilai: 'Drs. Hj. Siti Aminah, M.Pd.',
+                        nipPenilai: '19760814 200312 2 001',
+                        jabatanPenilai: 'Guru Ahli Madya',
+                        skPenilai: 'B-304/MTs.13/PP.00/01/2026',
+                        namaKepala: 'Dr. H. Mohammad Subhan, M.Ag.',
+                        nipKepala: '19691120 199503 1 002',
+                        tahun: '2026'
+                    };
+                    this.autoFillAngkaKreditDefaults();
+                    this.showToast('Data demo berhasil dimasukkan!');
+                },
+
+                exportJsonBackup() {
+                    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({
+                        identitas: this.identitas,
+                        akConfig: this.akConfig,
+                        competencies: this.competencies
+                    }, null, 2));
+                    const dlAnchorElem = document.createElement('a');
+                    dlAnchorElem.setAttribute("href", dataStr);
+                    dlAnchorElem.setAttribute("download", `PKG_${this.identitas.namaGuru.replace(/\s+/g, '_') || 'Madrasah'}_2026.json`);
+                    document.body.appendChild(dlAnchorElem);
+                    dlAnchorElem.click();
+                    dlAnchorElem.remove();
+                },
+
+                importJsonBackup(event) {
+                    const file = event.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        try {
+                            const parsed = JSON.parse(e.target.result);
+                            if (parsed.identitas && parsed.competencies) {
+                                this.identitas = parsed.identitas;
+                                this.akConfig = parsed.akConfig || this.akConfig;
+                                this.competencies = parsed.competencies;
+                                this.showToast('Data berhasil diimpor!');
+                            }
+                        } catch (err) {
+                            this.showToast('Gagal membaca berkas JSON', 'info');
+                        }
+                    };
+                    reader.readAsText(file);
+                },
+
+                triggerPrint() {
+                    window.print();
+                },
+
+                showToast(message, type = 'success') {
+                    this.toast.message = message;
+                    this.toast.type = type;
+                    this.toast.show = true;
+                    setTimeout(() => {
+                        this.toast.show = false;
+                    }, 3500);
+                }
+            }
+        }
+    </script>
+</body>
+</html>
